@@ -8,6 +8,7 @@ import com.example.hegemonycompose.domain.GetPlayersUseCase
 import com.example.hegemonycompose.domain.IncrementPlayerCapitalUseCase
 import com.example.hegemonycompose.domain.IncrementPlayerRevenueUseCase
 import com.example.hegemonycompose.domain.SavePlayerUseCase
+import com.example.hegemonycompose.domain.TransferMoneyUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +24,7 @@ class GameViewModel @Inject constructor(
     private val decrementPlayerRevenueUseCase: DecrementPlayerRevenueUseCase,
     private val incrementPlayerCapitalUseCase: IncrementPlayerCapitalUseCase,
     private val decrementPlayerCapitalUseCase: DecrementPlayerCapitalUseCase,
+    private val transferMoneyUseCase: TransferMoneyUseCase,
 ) :
     ViewModel() {
 
@@ -59,70 +61,96 @@ class GameViewModel @Inject constructor(
     }
 
     fun transferMoney(
-        originPlayer: PlayerClass,
-        destinationPlayer: PlayerClass,
-        quantity: Int,
-        isCapitalUsed: Boolean = false
+        originPlayer: PlayerData,
+        receivers: List<PlayerClass>,
+        amount: Int,
+        isCapitalUsed: Boolean = false,
+        isSupplyUsed: Boolean = false
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            addRevenue(destinationPlayer, quantity)
-            if (!isCapitalUsed) {
-                removeRevenue(originPlayer, quantity)
-            } else {
-                removeCapital(originPlayer, quantity)
+            try {
+                transferMoneyUseCase(
+                    originPlayer,
+                    amount,
+                    receivers,
+                    isCapitalUsed,
+                    isSupplyUsed
+                )
+            } catch (e: IllegalArgumentException) {
+                showNotEnoughMoneyToast(isCapitalUsed)
             }
         }
     }
 
-    fun addMoney(playerClass: PlayerClass, quantity: Int, moneyToCapital: Boolean = false) {
+    fun addMoney(playerClass: PlayerClass, amount: Int, moneyToCapital: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
             if (!moneyToCapital) {
-                addRevenue(playerClass, quantity)
+                addRevenue(playerClass, amount)
             } else {
-                addCapital(playerClass, quantity)
+                addCapital(playerClass, amount)
             }
         }
     }
 
-    private suspend fun addRevenue(playerClass: PlayerClass, quantity: Int) {
+    private suspend fun addRevenue(playerClass: PlayerClass, amount: Int) {
         try {
-            incrementPlayerRevenueUseCase(playerClass, quantity)
+            incrementPlayerRevenueUseCase(playerClass, amount)
         } catch (e: Exception) {
             _uiState.value = GameUiState.Error(e.message ?: "Unknown error")
         }
     }
 
-    private suspend fun addCapital(playerClass: PlayerClass, quantity: Int) {
+    private suspend fun addCapital(playerClass: PlayerClass, amount: Int) {
         try {
-            incrementPlayerCapitalUseCase(playerClass, quantity)
+            incrementPlayerCapitalUseCase(playerClass, amount)
         } catch (e: Exception) {
             _uiState.value = GameUiState.Error(e.message ?: "Unknown error")
         }
     }
 
-    fun removeMoney(playerClass: PlayerClass, quantity: Int, moneyToCapital: Boolean = false) {
+    fun removeMoney(playerClass: PlayerClass, amount: Int, moneyToCapital: Boolean = false) {
         viewModelScope.launch(Dispatchers.IO) {
             if (!moneyToCapital) {
-                removeRevenue(playerClass, quantity)
+                removeRevenue(playerClass, amount)
             } else {
-                removeCapital(playerClass, quantity)
+                removeCapital(playerClass, amount)
             }
         }
     }
 
-    private suspend fun removeRevenue(playerClass: PlayerClass, quantity: Int) {
+    private suspend fun removeRevenue(playerClass: PlayerClass, amount: Int) {
         try {
-            decrementPlayerRevenueUseCase(playerClass, quantity)
+            decrementPlayerRevenueUseCase(getCurrentPlayerDataByClass(playerClass), amount)
+        } catch (e: IllegalArgumentException) {
+            showNotEnoughMoneyToast(false)
         } catch (e: Exception) {
             _uiState.value = GameUiState.Error(e.message ?: "Unknown error")
         }
     }
 
-    private suspend fun removeCapital(playerClass: PlayerClass, quantity: Int) {
+    private suspend fun removeCapital(playerClass: PlayerClass, amount: Int) {
         try {
-            decrementPlayerCapitalUseCase(playerClass, quantity)
+            decrementPlayerCapitalUseCase(getCurrentPlayerDataByClass(playerClass), amount)
+        } catch (e: IllegalArgumentException) {
+            showNotEnoughMoneyToast(true)
         } catch (e: Exception) {
             _uiState.value = GameUiState.Error(e.message ?: "Unknown error")
+        }
+    }
+
+    private fun showNotEnoughMoneyToast(isCapitalUsed: Boolean = false) {
+        val currentState = (_uiState.value as GameUiState.Success)
+        val message: String =
+            if (isCapitalUsed) "No hay suficiente Capital" else "No hay suficientes Ingresos"
+        _uiState.value =
+            currentState.copy(gameData = currentState.gameData.copy(toastMessage = message))
+    }
+
+    fun clearToast() {
+        val currentState = _uiState.value
+        if (currentState is GameUiState.Success) {
+            _uiState.value =
+                currentState.copy(gameData = currentState.gameData.copy(toastMessage = ""))
         }
     }
 
@@ -130,5 +158,9 @@ class GameViewModel @Inject constructor(
         for (player in data.players) {
             savePlayerUseCase(player)
         }
+    }
+
+    private fun getCurrentPlayerDataByClass(playerClass: PlayerClass): PlayerData {
+        return (uiState.value as GameUiState.Success).gameData.players.find { it.playerClass == playerClass }!!
     }
 }

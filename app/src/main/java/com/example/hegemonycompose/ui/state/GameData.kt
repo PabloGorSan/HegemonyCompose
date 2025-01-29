@@ -2,7 +2,7 @@ package com.example.hegemonycompose.ui.state
 
 data class GameData(
     val players: List<PlayerData> = listOf(),
-    val userMessage: List<String> = listOf()
+    val toastMessage: String = ""
 )
 
 data class PlayerData(

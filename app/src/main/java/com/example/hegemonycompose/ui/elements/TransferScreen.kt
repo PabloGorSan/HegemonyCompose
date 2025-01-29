@@ -1,5 +1,6 @@
 package com.example.hegemonycompose.ui.elements
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,6 +18,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -46,6 +49,16 @@ import java.lang.Integer.parseInt
 @Composable
 fun TransferScreen(playerClass: PlayerClass, viewModel: GameViewModel) {
     val gameState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    LaunchedEffect(gameState) {
+        if (gameState is GameUiState.Success && (gameState as GameUiState.Success).gameData.toastMessage != "") {
+            (gameState as GameUiState.Success).gameData.toastMessage.let { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                viewModel.clearToast()
+            }
+        }
+    }
     Surface(modifier = Modifier.fillMaxSize()) {
         when (gameState) {
             is GameUiState.Loading -> CircularProgressIndicator()
@@ -58,7 +71,7 @@ fun TransferScreen(playerClass: PlayerClass, viewModel: GameViewModel) {
                     TransferComponent(
                         playerClass,
                         gameData,
-                        { o, d, m, i -> viewModel.transferMoney(o, d, m, i) },
+                        { o, r, m, icap, isup -> viewModel.transferMoney(o, r, m, icap, isup) },
                         { o, m, i -> viewModel.addMoney(o, m, i) },
                         { o, m, i -> viewModel.removeMoney(o, m, i) }
                     )
@@ -73,12 +86,12 @@ fun TransferScreen(playerClass: PlayerClass, viewModel: GameViewModel) {
 fun TransferComponent(
     playerClass: PlayerClass,
     gameData: GameData,
-    transferMoney: (PlayerClass, PlayerClass, Int, Boolean) -> Unit,
+    transferMoney: (PlayerData, List<PlayerClass>, Int, Boolean, Boolean) -> Unit,
     addMoney: (PlayerClass, Int, Boolean) -> Unit,
     removeMoney: (PlayerClass, Int, Boolean) -> Unit
 ) {
     var money by remember { mutableStateOf("") }
-    var destinationPlayers by remember { mutableStateOf<List<PlayerClass>>(emptyList()) }
+    var receivers by remember { mutableStateOf<List<PlayerClass>>(emptyList()) }
     var isSupplySelected by remember { mutableStateOf(false) }
     var isCapitalUsed by remember { mutableStateOf(false) }
     val originPlayer = gameData.players.find { it.playerClass == playerClass }!!
@@ -123,11 +136,11 @@ fun TransferComponent(
                             .padding(5.dp),
                         isSelectable = true,
                         onClick = { newSelectedPlayer ->
-                            if (destinationPlayers.contains(newSelectedPlayer)) {
-                                destinationPlayers =
-                                    destinationPlayers.filter { it != newSelectedPlayer }
+                            if (receivers.contains(newSelectedPlayer)) {
+                                receivers =
+                                    receivers.filter { it != newSelectedPlayer }
                             } else {
-                                destinationPlayers = destinationPlayers + newSelectedPlayer
+                                receivers = receivers + newSelectedPlayer
                             }
                         }
                     )
@@ -198,21 +211,19 @@ fun TransferComponent(
                     .fillMaxWidth()
                     .padding(10.dp),
                     onClick = {
-                        onClickTransfer(
-                            money,
-                            originPlayer,
-                            destinationPlayers,
-                            isSupplySelected,
-                            isCapitalUsed,
-                            transferMoney,
-                            removeMoney
-                        )
+                        if (money != "") {
+                            transferMoney(
+                                originPlayer,
+                                receivers,
+                                parseInt(money),
+                                isCapitalUsed,
+                                isSupplySelected
+                            )
+                        }
                     }) {
                     AutoSizeText("Enviar")
                 }
-
             }
-
         }
     }
 }
@@ -251,29 +262,6 @@ fun RadioButtonSingleSelection(modifier: Modifier = Modifier, changeOption: (Boo
     }
 }
 
-private fun onClickTransfer(
-    moneyString: String,
-    originPlayer: PlayerData,
-    destinationPlayersClass: List<PlayerClass>,
-    isSupplySelected: Boolean,
-    isCapitalUsed: Boolean,
-    transferMoney: (PlayerClass, PlayerClass, Int, Boolean) -> Unit,
-    removeMoney: (PlayerClass, Int, Boolean) -> Unit
-) {
-    if (moneyString != "") {
-        val money = parseInt(moneyString)
-        val payOptionMoney = if (isCapitalUsed) originPlayer.capital else originPlayer.revenue
-        if ((destinationPlayersClass.isNotEmpty() && payOptionMoney >= money * destinationPlayersClass.size) ||
-            isSupplySelected && payOptionMoney >= money * (destinationPlayersClass.size + 1)
-        ) {
-            for (playerClass: PlayerClass in destinationPlayersClass) {
-                transferMoney(originPlayer.playerClass, playerClass, money, isCapitalUsed)
-            }
-            if (isSupplySelected) removeMoney(originPlayer.playerClass, money, isCapitalUsed)
-        }
-    }
-}
-
 private fun onClickMoveMoney(
     moneyString: String,
     originPlayer: PlayerData,
@@ -299,9 +287,9 @@ fun TransferScreenPreview() {
         TransferComponent(
             CAPITALIST,
             getPreviewData(),
-            { o, d, m, i -> { } },
-            { o, m, i -> { } },
-            { o, m, i -> { } })
+            { o, d, m, i, i2 -> run { } },
+            { o, m, i -> run { } },
+            { o, m, i -> run { } })
     }
 }
 
@@ -309,7 +297,7 @@ fun TransferScreenPreview() {
 @Composable
 fun TransferSupplyScreenPreview() {
     Surface {
-        TransferSupplyComponent(getPreviewData(), { o, m -> { } })
+        TransferSupplyComponent(getPreviewData(), { o, m -> run { } })
     }
 }
 
