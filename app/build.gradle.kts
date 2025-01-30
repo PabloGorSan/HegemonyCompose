@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.jetbrainsKotlinSerialization)
     id("kotlin-kapt")
     id("com.google.dagger.hilt.android")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -55,6 +56,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.hilt.android)
     implementation(libs.androidx.adaptive.android)
+    implementation(libs.firebase.common.ktx)
+    implementation(libs.firebase.database.ktx)
     kapt(libs.hilt.android.compiler)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.serialization.json)
@@ -71,6 +74,9 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    implementation(platform(libs.google.firebase.bom))
+    implementation(libs.firebase.database)
 }
 
 kapt {

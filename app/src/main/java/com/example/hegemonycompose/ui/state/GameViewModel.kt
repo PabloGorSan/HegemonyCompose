@@ -25,8 +25,7 @@ class GameViewModel @Inject constructor(
     private val incrementPlayerCapitalUseCase: IncrementPlayerCapitalUseCase,
     private val decrementPlayerCapitalUseCase: DecrementPlayerCapitalUseCase,
     private val transferMoneyUseCase: TransferMoneyUseCase,
-) :
-    ViewModel() {
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow<GameUiState>(GameUiState.Loading)
     val uiState = _uiState.asStateFlow()
