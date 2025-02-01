@@ -11,10 +11,10 @@ plugins {
 android {
     namespace = "com.example.hegemonycompose"
     compileSdk = 35
+    flavorDimensions += listOf("database")
 
     defaultConfig {
         applicationId = "com.example.hegemonycompose"
-        minSdk = 30
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -41,6 +41,29 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
+    }
+    productFlavors {
+        create("localDbMinSdk33") {
+            dimension = "database"
+            buildConfigField("String", "DB_TYPE", "\"LOCAL\"")
+            minSdk = 33
+        }
+        create("localDbMinSdk26") {
+            dimension = "database"
+            buildConfigField("String", "DB_TYPE", "\"LOCAL\"")
+            minSdk = 26
+        }
+        create("firebaseDbMinSdk33") {
+            dimension = "database"
+            buildConfigField("String", "DB_TYPE", "\"FIREBASE\"")
+            minSdk = 33
+        }
+        create("firebaseDbMinSdk26") {
+            dimension = "database"
+            buildConfigField("String", "DB_TYPE", "\"FIREBASE\"")
+            minSdk = 26
+        }
     }
 }
 
