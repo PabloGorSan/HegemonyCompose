@@ -7,6 +7,6 @@ import javax.inject.Inject
 class SavePlayerUseCase @Inject constructor(private val gameRepository: GameRepository) {
 
     suspend operator fun invoke(playerData: PlayerData) {
-        gameRepository.create(playerData)
+        gameRepository.createPlayer(playerData)
     }
 }

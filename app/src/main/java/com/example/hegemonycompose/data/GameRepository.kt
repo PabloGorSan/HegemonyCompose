@@ -1,47 +1,68 @@
 package com.example.hegemonycompose.data
 
+import com.example.hegemonycompose.BuildConfig
 import com.example.hegemonycompose.ui.state.PlayerClass
 import com.example.hegemonycompose.ui.state.PlayerData
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class GameRepository @Inject constructor(private val playerDao: PlayerDao) {
-
+class GameRepository @Inject constructor(
+    private val localDatabaseRepository: LocalDatabaseRepository,
+    private val firebaseRepository: FirebaseRepository
+) {
     val players: Flow<List<PlayerData>> =
-        playerDao.findAll().map { entities ->
+        localDatabaseRepository.findAll().map { entities ->
             entities.map {
                 it.toModel()
             }
         }
 
-    suspend fun create(playerData: PlayerData) {
-        playerDao.create(playerData.toEntity())
+    init {
+        if (BuildConfig.DB_TYPE == "FIREBASE") {
+            firebaseRepository.observeFirebaseRealtimeChanges()
+        }
     }
 
-    suspend fun update(playerData: PlayerData) {
-        val dbPlayerData = playerDao.findByClass(playerData.playerClass).first()
-        dbPlayerData.revenue = playerData.revenue
-        dbPlayerData.capital = playerData.capital
-        playerDao.update(dbPlayerData)
+    suspend fun createPlayer(playerData: PlayerData) {
+        localDatabaseRepository.create(playerData)
+    }
+
+    suspend fun updatePlayer(playerData: PlayerData) {
+        localDatabaseRepository.update(playerData)
     }
 
     suspend fun incrementRevenue(playerClass: PlayerClass, incrementValue: Int) {
-        playerDao.incrementRevenue(playerClass, incrementValue)
+        if (BuildConfig.DB_TYPE == "FIREBASE") {
+            firebaseRepository.incrementRevenue(playerClass, incrementValue)
+        } else {
+            localDatabaseRepository.incrementRevenue(playerClass, incrementValue)
+        }
     }
 
     suspend fun incrementCapital(playerClass: PlayerClass, incrementValue: Int) {
-        playerDao.incrementCapital(playerClass, incrementValue)
+        if (BuildConfig.DB_TYPE == "FIREBASE") {
+            firebaseRepository.incrementCapital(playerClass, incrementValue)
+        } else {
+            localDatabaseRepository.incrementCapital(playerClass, incrementValue)
+        }
     }
 
     suspend fun decrementRevenue(playerClass: PlayerClass, decrementValue: Int) {
-        playerDao.decrementRevenue(playerClass, decrementValue)
+        if (BuildConfig.DB_TYPE == "FIREBASE") {
+            firebaseRepository.decrementRevenue(playerClass, decrementValue)
+        } else {
+            localDatabaseRepository.decrementRevenue(playerClass, decrementValue)
+        }
     }
 
     suspend fun decrementCapital(playerClass: PlayerClass, decrementValue: Int) {
-        playerDao.decrementCapital(playerClass, decrementValue)
+        if (BuildConfig.DB_TYPE == "FIREBASE") {
+            firebaseRepository.decrementCapital(playerClass, decrementValue)
+        } else {
+            localDatabaseRepository.decrementCapital(playerClass, decrementValue)
+        }
     }
 }

@@ -5,15 +5,16 @@ plugins {
     alias(libs.plugins.jetbrainsKotlinSerialization)
     id("kotlin-kapt")
     id("com.google.dagger.hilt.android")
+    id("com.google.gms.google-services")
 }
 
 android {
     namespace = "com.example.hegemonycompose"
     compileSdk = 35
+    flavorDimensions += listOf("database")
 
     defaultConfig {
         applicationId = "com.example.hegemonycompose"
-        minSdk = 33
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -40,6 +41,29 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
+    }
+    productFlavors {
+        create("localDbMinSdk33") {
+            dimension = "database"
+            buildConfigField("String", "DB_TYPE", "\"LOCAL\"")
+            minSdk = 33
+        }
+        create("localDbMinSdk26") {
+            dimension = "database"
+            buildConfigField("String", "DB_TYPE", "\"LOCAL\"")
+            minSdk = 26
+        }
+        create("firebaseDbMinSdk33") {
+            dimension = "database"
+            buildConfigField("String", "DB_TYPE", "\"FIREBASE\"")
+            minSdk = 33
+        }
+        create("firebaseDbMinSdk26") {
+            dimension = "database"
+            buildConfigField("String", "DB_TYPE", "\"FIREBASE\"")
+            minSdk = 26
+        }
     }
 }
 
@@ -55,6 +79,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.hilt.android)
     implementation(libs.androidx.adaptive.android)
+    implementation(libs.firebase.common.ktx)
+    implementation(libs.firebase.database.ktx)
     kapt(libs.hilt.android.compiler)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.serialization.json)
@@ -71,6 +97,9 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    implementation(platform(libs.google.firebase.bom))
+    implementation(libs.firebase.database)
 }
 
 kapt {

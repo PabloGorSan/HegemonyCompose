@@ -7,6 +7,6 @@ import javax.inject.Inject
 class UpdatePlayerUseCase @Inject constructor(private val gameRepository: GameRepository) {
 
     suspend operator fun invoke(playerData: PlayerData) {
-        gameRepository.update(playerData)
+        gameRepository.updatePlayer(playerData)
     }
 }
